@@ -31,6 +31,7 @@
 - 正式模型：\(\min C\ \mathrm{s.t.}\ E\le \epsilon\)，\(\epsilon\in\{1.0,0.9,0.8,0.7\}E_0\)。
 - NonAI 负荷对应的系统碳下界约 \(1.45\times 10^6\) tCO2；因此 **carbon_80 / carbon_70 相对 \(E_0\) 通常物理不可行**，结果中会标 `carbon_feasible=false` 并给出原因，而不是输出一个假的“已满足”排放。
 - carbon_90 接近该下界，需通过提高阶段一碳权重、把 AI 负荷迁向低碳区时才可能可行。
+- 另设可达间隙情景 `carbon_gap_75/50/25`：\(\epsilon=E_{\mathrm{NonAI}}+\alpha(E_0-E_{\mathrm{NonAI}})\)，用于展示可行域内的成本—碳权衡。
 
 ## 运行方式
 

@@ -1,0 +1,40 @@
+{
+  "n_tasks": 50000,
+  "operating_cost_CNY": 1648909921.3982759,
+  "carbon_tCO2": 1571089.541783913,
+  "mean_network_latency_ms": 25.89244,
+  "qos_loss": 0.54637,
+  "mean_wait_hour": 0.27208,
+  "migration_rate": 0.54858,
+  "realtime_on_time_rate": 1.0,
+  "renewable_utilization": 0.3286225213082708,
+  "renewable_utilization_of_deliverable": 1.0,
+  "absorbed_re_mwh": 3795842.621511,
+  "available_re_raw_mwh": 11550768.36,
+  "available_re_deliverable_mwh": 3795842.621511,
+  "curtail_deliverable_mwh": 0.0,
+  "peak_net_import_sum_MW": 2709.81973376,
+  "peak_net_import_by_region_MW": {
+    "RegionA": 550.0,
+    "RegionB": 520.0,
+    "RegionC": 510.0,
+    "RegionD": 419.81973375999996,
+    "RegionE": 370.0,
+    "RegionF": 340.0
+  },
+  "deadline_violation": 0,
+  "latency_violation": 0,
+  "carbon_budget_tCO2": 1571089.5417839126,
+  "carbon_min_given_schedule_tCO2": 1527447.4535640797,
+  "carbon_feasible": true,
+  "carbon_infeasible_reason": null,
+  "scenario": "carbon_gap_75",
+  "strategy": "joint|baseline_schedule",
+  "hard_pass": true,
+  "resource_checks": {
+    "hard_pass": true
+  },
+  "carbon_weight": null,
+  "nonAI_carbon_floor_tCO2": 1448806.5571211984,
+  "carbon_search_iterations": 0
+}

@@ -1,0 +1,148 @@
+E0=1611850.5, NonAI_floor=1448806.6, tasks=50000
+[carbon] carbon_100: budget=1611850.5, nonAI_floor=1448806.6
+[carbon] carbon_100: try baseline joint schedule
+[carbon] carbon_100: met with baseline schedule, E=1527447.4535640797
+DONE carbon_100: actual=1611847.6 budget=1611850.5 feasible=True cost=1632012953.5
+[carbon] carbon_90: budget=1450665.5, nonAI_floor=1448806.6
+[carbon] carbon_90: try baseline joint schedule
+[carbon] carbon_90: iteration 1/4 carbon_weight=500
+  [joint/cw=500] scheduling 1/50000
+  [joint/cw=500] scheduling 5000/50000
+  [joint/cw=500] scheduling 10000/50000
+  [joint/cw=500] scheduling 15000/50000
+  [joint/cw=500] scheduling 20000/50000
+  [joint/cw=500] scheduling 25000/50000
+  [joint/cw=500] scheduling 30000/50000
+  [joint/cw=500] scheduling 35000/50000
+  [joint/cw=500] scheduling 40000/50000
+  [joint/cw=500] scheduling 45000/50000
+  [joint/cw=500] scheduling 50000/50000
+[carbon] carbon_90: cw=500 actual=1519305.9 emin=1519305.9161021225 feasible=False
+[carbon] carbon_90: iteration 2/4 carbon_weight=2000
+  [joint/cw=2000] scheduling 1/50000
+  [joint/cw=2000] scheduling 5000/50000
+  [joint/cw=2000] scheduling 10000/50000
+  [joint/cw=2000] scheduling 15000/50000
+  [joint/cw=2000] scheduling 20000/50000
+  [joint/cw=2000] scheduling 25000/50000
+  [joint/cw=2000] scheduling 30000/50000
+  [joint/cw=2000] scheduling 35000/50000
+  [joint/cw=2000] scheduling 40000/50000
+  [joint/cw=2000] scheduling 45000/50000
+  [joint/cw=2000] scheduling 50000/50000
+[carbon] carbon_90: cw=2000 actual=1519198.7 emin=1519198.7461015158 feasible=False
+[carbon] carbon_90: iteration 3/4 carbon_weight=10000
+  [joint/cw=10000] scheduling 1/50000
+  [joint/cw=10000] scheduling 5000/50000
+  [joint/cw=10000] scheduling 10000/50000
+  [joint/cw=10000] scheduling 15000/50000
+  [joint/cw=10000] scheduling 20000/50000
+  [joint/cw=10000] scheduling 25000/50000
+  [joint/cw=10000] scheduling 30000/50000
+  [joint/cw=10000] scheduling 35000/50000
+  [joint/cw=10000] scheduling 40000/50000
+  [joint/cw=10000] scheduling 45000/50000
+  [joint/cw=10000] scheduling 50000/50000
+[carbon] carbon_90: cw=10000 actual=1519159.8 emin=1519159.8025584773 feasible=False
+[carbon] carbon_90: early stop — emin not improving (1519198.7461015158 → 1519159.8025584773)
+[carbon] carbon_90: INFEASIBLE after search; best actual=1519159.8 > budget=1450665.5
+DONE carbon_90: actual=1519159.8 budget=1450665.5 feasible=False cost=1719344660.1
+[carbon] carbon_80: budget=1289480.4, nonAI_floor=1448806.6
+[carbon] carbon_80: INFEASIBLE — NonAI carbon floor 1448806.6 > budget 1289480.4
+  [joint/cw=100000] scheduling 1/50000
+  [joint/cw=100000] scheduling 5000/50000
+  [joint/cw=100000] scheduling 10000/50000
+  [joint/cw=100000] scheduling 15000/50000
+  [joint/cw=100000] scheduling 20000/50000
+  [joint/cw=100000] scheduling 25000/50000
+  [joint/cw=100000] scheduling 30000/50000
+  [joint/cw=100000] scheduling 35000/50000
+  [joint/cw=100000] scheduling 40000/50000
+  [joint/cw=100000] scheduling 45000/50000
+  [joint/cw=100000] scheduling 50000/50000
+DONE carbon_80: actual=1519234.4 budget=1289480.4 feasible=False cost=1719400211.9
+[carbon] carbon_70: budget=1128295.4, nonAI_floor=1448806.6
+[carbon] carbon_70: INFEASIBLE — NonAI carbon floor 1448806.6 > budget 1128295.4
+  [joint/cw=100000] scheduling 1/50000
+  [joint/cw=100000] scheduling 5000/50000
+  [joint/cw=100000] scheduling 10000/50000
+  [joint/cw=100000] scheduling 15000/50000
+  [joint/cw=100000] scheduling 20000/50000
+  [joint/cw=100000] scheduling 25000/50000
+  [joint/cw=100000] scheduling 30000/50000
+  [joint/cw=100000] scheduling 35000/50000
+  [joint/cw=100000] scheduling 40000/50000
+  [joint/cw=100000] scheduling 45000/50000
+  [joint/cw=100000] scheduling 50000/50000
+DONE carbon_70: actual=1519234.4 budget=1128295.4 feasible=False cost=1719400211.9
+[carbon] carbon_gap_75: budget=1571089.5, nonAI_floor=1448806.6
+[carbon] carbon_gap_75: try baseline joint schedule
+[carbon] carbon_gap_75: met with baseline schedule, E=1527447.4535640797
+DONE carbon_gap_75: actual=1571089.5 budget=1571089.5 feasible=True cost=1648909921.4
+[carbon] carbon_gap_50: budget=1530328.5, nonAI_floor=1448806.6
+[carbon] carbon_gap_50: try baseline joint schedule
+[carbon] carbon_gap_50: met with baseline schedule, E=1527447.4535640797
+DONE carbon_gap_50: actual=1530328.5 budget=1530328.5 feasible=True cost=1692980033.4
+[carbon] carbon_gap_25: budget=1489567.6, nonAI_floor=1448806.6
+[carbon] carbon_gap_25: try baseline joint schedule
+[carbon] carbon_gap_25: iteration 1/4 carbon_weight=500
+  [joint/cw=500] scheduling 1/50000
+  [joint/cw=500] scheduling 5000/50000
+  [joint/cw=500] scheduling 10000/50000
+  [joint/cw=500] scheduling 15000/50000
+  [joint/cw=500] scheduling 20000/50000
+  [joint/cw=500] scheduling 25000/50000
+  [joint/cw=500] scheduling 30000/50000
+  [joint/cw=500] scheduling 35000/50000
+  [joint/cw=500] scheduling 40000/50000
+  [joint/cw=500] scheduling 45000/50000
+  [joint/cw=500] scheduling 50000/50000
+[carbon] carbon_gap_25: cw=500 actual=1519305.9 emin=1519305.9161021225 feasible=False
+[carbon] carbon_gap_25: iteration 2/4 carbon_weight=2000
+  [joint/cw=2000] scheduling 1/50000
+  [joint/cw=2000] scheduling 5000/50000
+  [joint/cw=2000] scheduling 10000/50000
+  [joint/cw=2000] scheduling 15000/50000
+  [joint/cw=2000] scheduling 20000/50000
+  [joint/cw=2000] scheduling 25000/50000
+  [joint/cw=2000] scheduling 30000/50000
+  [joint/cw=2000] scheduling 35000/50000
+  [joint/cw=2000] scheduling 40000/50000
+  [joint/cw=2000] scheduling 45000/50000
+  [joint/cw=2000] scheduling 50000/50000
+[carbon] carbon_gap_25: cw=2000 actual=1519198.7 emin=1519198.7461015158 feasible=False
+[carbon] carbon_gap_25: iteration 3/4 carbon_weight=10000
+  [joint/cw=10000] scheduling 1/50000
+  [joint/cw=10000] scheduling 5000/50000
+  [joint/cw=10000] scheduling 10000/50000
+  [joint/cw=10000] scheduling 15000/50000
+  [joint/cw=10000] scheduling 20000/50000
+  [joint/cw=10000] scheduling 25000/50000
+  [joint/cw=10000] scheduling 30000/50000
+  [joint/cw=10000] scheduling 35000/50000
+  [joint/cw=10000] scheduling 40000/50000
+  [joint/cw=10000] scheduling 45000/50000
+  [joint/cw=10000] scheduling 50000/50000
+[carbon] carbon_gap_25: cw=10000 actual=1519159.8 emin=1519159.8025584773 feasible=False
+[carbon] carbon_gap_25: early stop — emin not improving (1519198.7461015158 → 1519159.8025584773)
+[carbon] carbon_gap_25: INFEASIBLE after search; best actual=1519159.8 > budget=1489567.6
+DONE carbon_gap_25: actual=1519159.8 budget=1489567.6 feasible=False cost=1719344660.1
+                 scenario  operating_cost_CNY  carbon_tCO2  carbon_budget_tCO2 carbon_feasible  mean_wait_hour  hard_pass
+     baseline_local_first        1.706194e+09 1.741443e+06                 NaN             NaN         0.00000       True
+    baseline_lowest_price        1.607023e+09 1.684024e+06                 NaN             NaN        77.16708       True
+   baseline_lowest_carbon        1.632187e+09 1.615961e+06                 NaN             NaN        32.78858       True
+           baseline_joint        1.632013e+09 1.611851e+06                 NaN             NaN         0.27208       True
+               carbon_100        1.632013e+09 1.611848e+06        1.611851e+06            True         0.27208       True
+                carbon_90        1.719345e+09 1.519160e+06        1.450665e+06           False         5.40168      False
+                carbon_80        1.719400e+09 1.519234e+06        1.289480e+06           False         6.28912      False
+                carbon_70        1.719400e+09 1.519234e+06        1.128295e+06           False         6.28912      False
+price_peak_valley_amplify        1.508212e+09 1.730696e+06                 NaN             NaN         0.27036       True
+               price_flat        1.766165e+09 1.599235e+06                 NaN             NaN         0.26928       True
+      price_carbon_linked        1.760438e+09 1.597883e+06                 NaN             NaN         0.27444       True
+               re_minus20        1.933433e+09 1.833737e+06                 NaN             NaN         0.27208       True
+                re_plus20        1.347424e+09 1.440016e+06                 NaN             NaN         0.27208       True
+              peak_cap_90        1.632092e+09 1.612296e+06                 NaN             NaN         0.27208       True
+            carbon_gap_75        1.648910e+09 1.571090e+06        1.571090e+06            True         0.27208       True
+            carbon_gap_50        1.692980e+09 1.530329e+06        1.530329e+06            True         0.27208       True
+            carbon_gap_25        1.719345e+09 1.519160e+06        1.489568e+06           False         5.40168      False
+Elapsed 1601.2s

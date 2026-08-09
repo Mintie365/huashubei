@@ -1,0 +1,46 @@
+[
+  {
+    "scenario": "fast_carbon_100",
+    "budget": 1503659.4135110546,
+    "actual": 1503654.162695192,
+    "feasible": true,
+    "reason": null,
+    "cw": null,
+    "cost": 1337745905.4588003,
+    "emin": 1451480.2378798805,
+    "hard_pass": true
+  },
+  {
+    "scenario": "fast_carbon_90",
+    "budget": 1353293.4721599491,
+    "actual": 1451442.7913707213,
+    "feasible": false,
+    "reason": "nonAI_floor 1448806.557 > budget 1353293.472",
+    "cw": 100000.0,
+    "cost": 1628180539.0947065,
+    "emin": 1451442.7913707213,
+    "hard_pass": false
+  },
+  {
+    "scenario": "fast_carbon_80",
+    "budget": 1202927.5308088437,
+    "actual": 1451442.7913707213,
+    "feasible": false,
+    "reason": "nonAI_floor 1448806.557 > budget 1202927.531",
+    "cw": 100000.0,
+    "cost": 1628180539.0947065,
+    "emin": 1451442.7913707213,
+    "hard_pass": false
+  },
+  {
+    "scenario": "fast_carbon_70",
+    "budget": 1052561.5894577382,
+    "actual": 1451442.7913707213,
+    "feasible": false,
+    "reason": "nonAI_floor 1448806.557 > budget 1052561.589",
+    "cw": 100000.0,
+    "cost": 1628180539.0947065,
+    "emin": 1451442.7913707213,
+    "hard_pass": false
+  }
+]

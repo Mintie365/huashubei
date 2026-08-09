@@ -101,13 +101,23 @@ def score_candidate(
     max_latency: float,
     data: Q4Data,
     gpu_use: np.ndarray,
+    ai_power: np.ndarray | None = None,
     carbon_weight: float | None = None,
 ) -> float:
     r = REGION_INDEX[region]
     idx, q = candidate_profile(duration_min, start)
     facility = gpu_demand * power_per_gpu * q * data.pue[r]
     energy_cost = float(np.dot(facility, data.price[r, idx]))
-    carbon_cost = float(np.dot(facility, data.carbon[r, idx]))
+    # RE-aware carbon proxy: only the part of new facility load that exceeds
+    # residual deliverable RE (after NonAI + already placed AI) incurs CI.
+    existing = data.non_ai[r, idx] * data.pue[r]
+    if ai_power is not None:
+        existing = existing + ai_power[r, idx] * data.pue[r]
+    re_left = np.maximum(data.available_re[r, idx] - existing, 0.0)
+    purchased = np.maximum(facility - re_left, 0.0)
+    carbon_cost = float(np.dot(purchased, data.carbon[r, idx]))
+    # Fallback intensity signal (keeps preferring low-CI regions when RE is abundant)
+    carbon_intensity = float(np.dot(facility, data.carbon[r, idx]))
     wait = float(start - arrival)
     latency = data.latency_map[(source, region)]
     migration = float(region != source)
@@ -119,15 +129,20 @@ def score_candidate(
         return energy_cost + 1e-3 * wait + 1e-4 * latency
     if strategy == "lowest_carbon":
         cw = 1e3 if carbon_weight is None else float(carbon_weight)
-        return cw * carbon_cost + 1e-3 * wait + 1e-4 * latency
+        return cw * carbon_cost + 0.1 * carbon_intensity + 1e-3 * wait + 1e-4 * latency
     # joint (default) or carbon-weight override used by ε-constraint search
     cw = 80.0 if carbon_weight is None else float(carbon_weight)
+    # When searching under a tight carbon budget, de-emphasize wait/migration so
+    # the RE-aware carbon term can actually move load to low-carbon regions.
+    wait_w = 15.0 if carbon_weight is None or carbon_weight <= 100 else 1.0
+    mig_w = 8.0 if carbon_weight is None or carbon_weight <= 100 else 0.5
     return (
         energy_cost / 1000.0
         + cw * carbon_cost
-        + 15.0 * wait
+        + 0.05 * carbon_intensity
+        + wait_w * wait
         + 0.05 * latency
-        + 8.0 * migration
+        + mig_w * migration
         + 20.0 * peak_after
     )
 
@@ -216,6 +231,7 @@ def schedule_tasks(
                     max_latency=max_latency,
                     data=data,
                     gpu_use=gpu_use,
+                    ai_power=ai_power,
                     carbon_weight=carbon_weight,
                 )
                 if best is None or cost < best[0]:

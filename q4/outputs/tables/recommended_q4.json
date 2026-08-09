@@ -1,6 +1,6 @@
 {
   "preferred_scenario": "baseline_joint",
-  "selection_rule": "joint two-stage co-optimization minimizing operating cost under physical constraints; scenarios compare carbon budgets, price mechanisms, and renewable volatility",
+  "selection_rule": "joint two-stage co-optimization minimizing operating cost under physical constraints; carbon scenarios use hard ε-constraints (infeasible if below NonAI floor or unreachable schedule floor)",
   "operating_cost_CNY": 1632012953.4730585,
   "carbon_tCO2": 1611850.536671484,
   "renewable_utilization": 0.3286225213082708,
@@ -13,5 +13,6 @@
   "qos_loss": 0.54637,
   "hard_pass": true,
   "note_re_utilization": "renewable_utilization = absorbed / attachment AvailableRenewable (6-region sum). renewable_utilization_of_deliverable is LP fill-rate vs deliverable ceiling.",
-  "n_tasks_scheduled": 50000
+  "n_tasks_scheduled": 50000,
+  "carbon_note": "Absolute 90/80/70% of E0 may be infeasible due to NonAI carbon floor (~1.449e6). Feasible trade-off shown by carbon_gap_75/50."
 }
