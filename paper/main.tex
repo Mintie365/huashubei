@@ -1749,6 +1749,8 @@ E\le\varepsilon.
 
 \vspace{1em}
 
+\noindent\textbf{AI 工具使用声明：}
+本参赛队在竞赛过程中使用了 AI 工具，主要用于语言润色、代码调试与图表排版辅助，详细使用情况见附录。
 
 \begin{thebibliography}{99}
 
@@ -1781,6 +1783,12 @@ Deb~K, Pratap~A, Agarwal~S, et al. A fast and elitist multiobjective genetic alg
 
 \bibitem{曹晓峻2018混合运行}
 曹晓峻, 高赐威, 李德智, 杨建林. 数据网络与电力网络混合运行建模及其参与系统经济运行[J]. 中国电机工程学报, 2018, 38(5): 1448-1456.
+
+\bibitem{cursor2026}
+Cursor, Cursor Agent (Grok-4.5), Anysphere, 2026-08-08--2026-08-10.
+
+\bibitem{deepseek2026}
+DeepSeek, DeepSeek-V3 / DeepSeek-R1, 深度求索(DeepSeek), 2026-08-08--2026-08-10.
 
 \end{thebibliography}
 
@@ -2170,6 +2178,94 @@ RegionF & $340.0$ & $340$ \\
 问题一调度 & 字典序 MILP & 等待 $0$，峰值利用率 $56.5\%$，gap $0.53\%$ \\
 问题二 & \texttt{greedy\_bal2} & 成本 $3.835\times10^8$，碳 $3.400\times10^5$，时延 $35.88$\,ms \\
 问题四 & joint 两阶段 & 成本 $1.632\times10^9$，碳 $1.612\times10^6$，等待 $0.27$\,h \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{AI 工具使用详情}
+\label{app:ai-usage}
+
+按《“华数杯”大学生数学建模竞赛人工智能工具使用章程》要求，说明本队 AI 工具使用情况如下。核心建模思路、约束设计、结果解释与最终表述均由参赛队员独立完成；AI 仅作为辅助手段。
+
+\subsubsection{所用 AI 工具名称和版本}
+
+\begin{table}[H]
+\centering
+\small
+\caption{所用 AI 工具名称和版本}
+\label{tab:ai-tools}
+\begin{tabular}{cllll}
+\toprule
+序号 & AI 工具名称 & 版本/型号 & 开发机构/公司 & 使用日期 \\
+\midrule
+1 & Cursor & Cursor Agent（Grok-4.5） & Anysphere & 2026-08-08--2026-08-10 \\
+2 & DeepSeek & DeepSeek-V3 / DeepSeek-R1 & 深度求索(DeepSeek) & 2026-08-08--2026-08-10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{具体使用目的和环节}
+
+\begin{table}[H]
+\centering
+\small
+\caption{AI 工具具体使用目的和环节}
+\label{tab:ai-purpose}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{clp{4.2cm}l}
+\toprule
+序号 & 使用环节（论文章节） & 使用目的 & 使用的 AI 工具 \\
+\midrule
+1 & 问题一--四程序与结果复核；附录排版 & 辅助编程、代码调试与仓库整理；核对指标口径与图表文件组织 & Cursor \\
+2 & 摘要、引言表述与部分文字润色 & 文本润色、表达梳理与格式提示；不直接生成核心模型与结论 & DeepSeek \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{关键交互记录}
+
+\textbf{交互记录 1：}
+
+提示词（Prompt）：
+\begin{quote}
+\small
+请根据现有 Q4 两阶段结果，检查碳 $\varepsilon$-约束是否被静默放松，并说明新能源利用率相对附件 \texttt{AvailableRenewable} 的正确口径；同时帮助整理可复现的结果表与示意图。
+\end{quote}
+
+AI 回复（摘要）：
+\begin{quote}
+\small
+指出应对碳预算施加硬约束并在不可行时明确标记；新能源利用率应以附件可用新能源为分母报告消纳比例，而不可仅用可消纳上界自洽得到接近 $100\%$ 的结果。随后给出指标重算与图表整理建议。
+\end{quote}
+
+\textbf{交互记录 2：}
+
+提示词（Prompt）：
+\begin{quote}
+\small
+请对摘要与问题分析段落做中文表达润色，保持原有技术结论与数字不变，避免改写模型假设与核心创新表述。
+\end{quote}
+
+AI 回复（摘要）：
+\begin{quote}
+\small
+给出句子通顺化与衔接调整建议；队员据此手工改写定稿，未直接粘贴整段生成文本作为最终正文。
+\end{quote}
+
+\subsubsection{采纳和人工修改情况}
+
+\begin{table}[H]
+\centering
+\small
+\caption{AI 生成内容采纳与人工修改情况}
+\label{tab:ai-adopt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{clcp{6.2cm}}
+\toprule
+序号 & AI 生成内容概述 & 是否采纳 & 人工修改情况说明 \\
+\midrule
+1 & 代码调试建议、指标口径核对与排版辅助 & 部分采纳 & 仅采纳可复现的技术建议；模型结构、约束与最终数值由队员复核后写入论文 \\
+2 & 文字润色与段落衔接建议 & 部分采纳 & 仅吸收表达层面的修改；研究目的、方法创新、结果与讨论均由队员独立撰写与定稿 \\
 \bottomrule
 \end{tabular}
 \end{table}
