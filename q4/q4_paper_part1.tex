@@ -1,0 +1,284 @@
+% 问题四论文草稿：问题分析 + 阶段一 + 阶段二 + 多情景设计
+% 结构：两阶段总框架并入问题分析；硬碳迭代写入多情景（碳约束）小节；无小结节。
+
+\section{问题四：多区域算储电协同优化模型的构建与求解}
+
+\subsection{问题分析与建模边界}
+
+问题四要求在多区域智算中心网络上，对计算任务调度、储能运行与电网购售电进行协同优化，并同时关注运行成本、碳排放、服务质量、新能源消纳与购电峰值等目标。与前几问相比，本问的关键变化有三点：一是决策空间由“单阶段算力调度”扩展为“算力—储能—电力”耦合；二是评价由单一主指标扩展为多目标权衡；三是情景维度增加碳预算、电价机制与新能源出力扰动。
+
+结合题目说明，本文明确如下建模边界。第一，不构建区域间电力潮流与网络带宽模型，区域耦合仅通过任务可迁移机房集合与网络时延约束体现。第二，任务不可拆分、不可抢占；实时推理任务到达后立即执行；全部任务须在终端时刻前完成。第三，设施功率由 AI 与 NonAI 的 IT 负荷经 PUE 放大得到，并受 GPU、IT 与设施功率上限约束。第四，附件中各区域逐时 \(\mathrm{AvailableRenewable}\) 完全相同；若按六区独立写入能量平衡，将六倍重复计算系统新能源并导致近零购电的虚假解。因此，阶段二采用各区域基准可消纳上界
+\begin{equation}
+\overline{R}_{r,t}
+=
+\min\bigl\{
+U^{\mathrm{base}}_{r,t}+C^{\mathrm{RE,base}}_{r,t}+S^{\mathrm{base}}_{r,t},\;
+R^{\mathrm{raw}}_{r,t}
+\bigr\},
+\end{equation}
+其中 \(U^{\mathrm{base}},C^{\mathrm{RE,base}},S^{\mathrm{base}}\) 分别为附件基准方案中的新能源直供、新能源充电与售电分量，\(R^{\mathrm{raw}}\) 为附件原始可用出力。利用率指标仍以附件 \(\sum R^{\mathrm{raw}}\) 为分母报告，以免把“可消纳上界填充率”误当作系统新能源利用率。
+
+在上述边界下，若将全部任务起止、机房选择、储能充放电与购售电纳入单一大规模混合整数规划，变量与耦合约束规模过大，且碳、峰值等目标与成本目标量纲不一，直接加权难以解释。为此，本文采用\textbf{两阶段协同优化}：阶段一在硬资源与服务质量约束下，完成任务的时空落点，形成各区域 AI 负荷轨迹；阶段二在负荷固定后，对各区域独立求解储—电线性规划，主目标最小化运行成本
+\begin{equation}
+\min\;
+C
+=
+\sum_{r\in\mathcal{R}}
+\sum_{t\in\mathcal{T}}
+\bigl(
+p^{\mathrm{buy}}_{r,t}G_{r,t}
+-
+p^{\mathrm{sell}}_{r,t}S_{r,t}
+\bigr).
+\end{equation}
+碳排放、峰值净购电与新能源利用率不进入主目标的加权和，而通过 \(\varepsilon\)-约束或情景比较进入阶段二；当碳预算在当前排程下不可达时，再反馈调整阶段一的碳感知权重。该分解保留了题目要求的物理耦合，同时使 5 万任务规模下的求解可操作、可复核。
+
+\subsection{阶段一：碳电价感知的任务调度模型}
+
+记任务集合为 \(\mathcal{J}\)，区域集合为 \(\mathcal{R}=\{A,\ldots,F\}\)。对任务 \(j\in\mathcal{J}\)，决策为其执行区域 \(r_j\in\mathcal{R}_j\) 与整数开始时刻 \(s_j\)，其中 \(\mathcal{R}_j\) 为满足网络时延上限的可行机房集合。设任务 GPU 需求为 \(g_j\)、持续时间为 \(d_j\)（分钟）、单位 GPU 功率为 \(\pi_j\)，则在小时 \(t\) 的分钟重叠比例为 \(q_{j,t}(s_j)\in[0,1]\)，对应增量 GPU 占用与 AI 功率为
+\begin{equation}
+\Delta\mathrm{GPU}_{j,r,t}
+=
+g_j q_{j,t}(s_j),\qquad
+\Delta P^{\mathrm{AI}}_{j,r,t}
+=
+g_j\pi_j q_{j,t}(s_j).
+\end{equation}
+
+\textbf{硬约束}包括：（i）实时任务 \(s_j=a_j\)，非实时任务 \(a_j\le s_j\) 且完工时刻不超过截止时刻与终端时刻；（ii）\(r_j\in\mathcal{R}_j\)；（iii）各区各时 GPU 容量、AI+NonAI 的 IT 功率上限，以及经 PUE 后的设施功率上限。凡违反硬约束的候选一律剔除。
+
+由于精确联合整数规划在全量任务上难以在竞赛时限内稳定求解，阶段一采用动态贪心：先按“实时优先—可行区少—松弛紧—GPU·时长大”排序，再对每个任务在可行 \((r,s)\) 上最小化代理代价。主推联合策略的评分为
+\begin{equation}
+\begin{aligned}
+\Phi(j,r,s)
+&=
+\frac{1}{1000}E^{\mathrm{price}}_{j,r,s}
++
+\lambda E^{\mathrm{carbon}}_{j,r,s}
++
+0.05\,E^{\mathrm{CI}}_{j,r,s}
+\\
+&\quad
++
+w_w(s-a_j)
++
+0.05\,L_{o_j,r}
++
+w_m\mathbb{I}\{r\neq o_j\}
++
+20\,\rho^{\mathrm{peak}}_{j,r,s},
+\end{aligned}
+\end{equation}
+其中 \(o_j\) 为任务源区域，\(L_{o_j,r}\) 为网络时延，\(\rho^{\mathrm{peak}}\) 为放置后的 GPU 峰值占用率代理；\(E^{\mathrm{price}}\) 为设施电能量与分时电价的内积。碳相关项采用\textbf{计及剩余新能源}的代理：先计算该区该时段在已有 NonAI 与已放置 AI 之后的剩余可消纳新能源 \(\widetilde{R}_{r,t}\)，仅对超出部分计碳，
+\begin{equation}
+E^{\mathrm{carbon}}_{j,r,s}
+=
+\sum_{t}
+\max\bigl\{
+\Delta P^{\mathrm{AI}}_{j,r,t}\cdot\mathrm{PUE}_r-\widetilde{R}_{r,t},\,0
+\bigr\}
+\cdot
+\mathrm{CI}_{r,t},
+\end{equation}
+并以设施功率与碳强度的内积 \(E^{\mathrm{CI}}\) 作为弱偏好项。默认 \(\lambda=80\)；在碳 \(\varepsilon\)-约束收紧且需重调度时增大 \(\lambda\)，并相应降低等待与迁移权重，以使负荷更易迁向低购电碳区时。对比策略 \(\texttt{local\_first}\)、\(\texttt{lowest\_price}\)、\(\texttt{lowest\_carbon}\) 仅改变 \(\Phi\) 的主导项，硬约束集保持不变。
+
+阶段一输出各任务的 \((r_j,s_j)\) 及区域 AI 功率轨迹 \(P^{\mathrm{AI}}_{r,t}\)。区域总设施负荷
+\begin{equation}
+L_{r,t}
+=
+\bigl(P^{\mathrm{NonAI}}_{r,t}+P^{\mathrm{AI}}_{r,t}\bigr)\,\mathrm{PUE}_r
+\end{equation}
+作为阶段二的外生输入。
+
+\subsection{阶段二：区域储电联合优化模型}
+
+固定 \(\{L_{r,t}\}\) 后，各区域 \(r\) 在时段 \(\mathcal{T}\) 上独立求解储—电线性规划。决策变量为购电 \(G_{r,t}\)、售电 \(S_{r,t}\)、充电 \(C_{r,t}\)、放电 \(D_{r,t}\)、弃光 \(U_{r,t}\) 与荷电状态 \(\mathrm{SOC}_{r,t}\)。主问题为最小化区域运行成本
+\begin{equation}
+\min\;
+\sum_{t\in\mathcal{T}}
+\bigl(
+p^{\mathrm{buy}}_{r,t}G_{r,t}
+-
+p^{\mathrm{sell}}_{r,t}S_{r,t}
+\bigr).
+\end{equation}
+系统总成本为各区之和 \(C=\sum_r C_r\)。
+
+附件口径的能量平衡为
+\begin{equation}
+G_{r,t}+\overline{R}_{r,t}+D_{r,t}
+=
+L_{r,t}+C_{r,t}+S_{r,t}+U_{r,t},
+\qquad
+\forall t,
+\end{equation}
+并满足功率上下界
+\begin{equation}
+\begin{aligned}
+0&\le G_{r,t}\le G^{\max}_r,
+&
+0&\le S_{r,t}\le \min\{S^{\max}_r,S^{\mathrm{limit}}_r\},
+\\
+0&\le C_{r,t}\le C^{\max}_r,
+&
+0&\le D_{r,t}\le D^{\max}_r,
+&
+0&\le U_{r,t}\le \overline{R}_{r,t},
+\end{aligned}
+\end{equation}
+以及储能动态与终端约束
+\begin{equation}
+\begin{aligned}
+\mathrm{SOC}_{r,0}
+&=
+\mathrm{SOC}^{\mathrm{init}}_r+\eta^c_r C_{r,0}-D_{r,0}/\eta^d_r,
+\\
+\mathrm{SOC}_{r,t}
+&=
+\mathrm{SOC}_{r,t-1}+\eta^c_r C_{r,t}-D_{r,t}/\eta^d_r,
+\\
+\mathrm{SOC}^{\min}_r
+&\le
+\mathrm{SOC}_{r,t}
+\le
+\mathrm{SOC}^{\max}_r,
+\qquad
+\mathrm{SOC}_{r,|\mathcal{T}|-1}
+\ge
+\mathrm{SOC}^{\mathrm{init}}_r.
+\end{aligned}
+\end{equation}
+系统碳排放定义为购电碳强度加权：
+\begin{equation}
+E
+=
+\sum_{r}\sum_{t}
+\mathrm{CI}_{r,t}\,G_{r,t}.
+\end{equation}
+新能源消纳量取 \(\sum_{r,t}(\overline{R}_{r,t}-U_{r,t})\)；正式利用率以附件原始可用出力 \(\sum R^{\mathrm{raw}}\) 为分母。阶段二在基准设定下仅最小化成本；碳预算 \(E\le\varepsilon\)、峰值净购电上限、利用率下界等作为可选约束，在下一小节的情景中按需启用。上述 LP 由 HiGHS 求解。
+
+\subsection{多情景设计与评价指标}
+
+为响应题目对多情景波动比较的要求，在联合策略基线（阶段一 \(\texttt{joint}\)+阶段二成本最优）之上，设置三类扰动情景。统一评价指标包括：运行成本 \(C\)、碳排放 \(E\)、平均等待、平均网络时延、新能源利用率、系统峰值净购电，以及资源/时延/碳约束是否满足（\(\texttt{hard\_pass}\)/\(\texttt{carbon\_feasible}\)）。
+
+\subsubsection{碳约束情景}
+
+以基线排放 \(E_0\) 为参照，考察硬 \(\varepsilon\)-约束
+\begin{equation}
+\min\; C
+\quad
+\mathrm{s.t.}
+\quad
+E\le\varepsilon.
+\end{equation}
+绝对比例情景取 \(\varepsilon\in\{1.0,0.9,0.8,0.7\}E_0\)。求解时碳约束不可静默丢弃：先对各区求最小碳 \(E^{\min}_r\)，若 \(\sum_r E^{\min}_r>\varepsilon\) 则当前排程不可达；否则将松弛 \(\varepsilon-\sum E^{\min}_r\) 按各区头寸比例分配为区域预算并重解成本 LP。不可达时提高阶段一碳权重 \(\lambda\) 重调度后再试。另计算仅 NonAI 负荷下的系统碳下界 \(E^{\mathrm{NonAI}}\)：若 \(\varepsilon<E^{\mathrm{NonAI}}\)，则物理不可行，直接标记并报告原因，而不输出“假满足”解。
+
+由于 \(E^{\mathrm{NonAI}}\) 已接近 \(0.9E_0\) 量级，绝对比例 \(0.8E_0\)、\(0.7E_0\) 通常不可行。为在可行域内展示成本—碳权衡，另设间隙情景
+\begin{equation}
+\varepsilon(\alpha)=E^{\mathrm{NonAI}}+\alpha\bigl(E_0-E^{\mathrm{NonAI}}\bigr),
+\qquad
+\alpha\in\{0.75,0.50,0.25\}.
+\end{equation}
+
+\subsubsection{电价机制情景}
+
+固定新能源口径，改变购售电价格信号并重新执行两阶段，比较机制对成本、碳排与负荷时空分布的影响。三种机制为：
+\begin{enumerate}
+\item \textbf{峰谷拉大}：以各区小时均价为中心，将购电价偏离放大为 \(1.6\) 倍并设下限，售电价上浮 \(10\%\)，强化分时套利动机；
+\item \textbf{平价}：各区购电价取该区时段均值并全时段拉平，削弱峰谷差；
+\item \textbf{碳—电联动}：令 \(p^{\mathrm{buy}}_{r,t}\leftarrow p^{\mathrm{buy}}_{r,t}+\kappa\,\mathrm{CI}_{r,t}\)（取 \(\kappa=80\)\,CNY/tCO\(_2\)），使高碳时段购电更贵。
+\end{enumerate}
+电价变化同时进入阶段一代理分与阶段二目标，从而同时改变任务落点与储—电运行。
+
+\subsubsection{新能源波动情景}
+
+在基线排程上，将可消纳上界与原始可用出力同乘扰动因子 \(\gamma\in\{0.8,1.2\}\)，对应新能源偏紧与偏松。偏紧情景考察购电成本与碳排上升、峰值承压；偏松情景在阶段二附加利用率下界（弃光不超过可消纳上界的 \(10\%\)），考察额外新能源能否被负荷与储能有效消纳。该类情景不强制重调度任务，以分离“出力波动”与“算力重分布”的效应。
+
+\subsection{数值结果与分析}
+
+全量实验调度 \(5\times 10^4\) 个任务。结果按逻辑分两步给出：先比较阶段一策略并展示推荐方案的运行形态，再在联合基线上展开碳、电价与新能源三类情景波动分析。
+
+\subsubsection{基线策略比较与推荐方案}
+
+四种阶段一策略在相同阶段二设定下的结果见图~\ref{fig:q4-baseline} 与表~\ref{tab:q4-baseline}。图~\ref{fig:q4-baseline}(a)(b) 显示：\(\texttt{lowest\_price}\) 成本最低，但平均等待高达 \(77.2\)\,h，服务质量不可接受；\(\texttt{local\_first}\) 等待为 \(0\)，但成本与碳排均为最差；\(\texttt{lowest\_carbon}\) 碳略低于联合策略，却以 \(32.8\)\,h 等待为代价。联合策略 \(\texttt{joint}\) 在成本 \(1.632\times 10^9\)\,CNY、碳排 \(1.612\times 10^6\)\,tCO\(_2\) 的同时，将平均等待压至 \(0.27\)\,h、平均时延 \(25.9\)\,ms，并通过全部资源与截止硬约束，故作为推荐基线。
+
+相对附件原始 \(\mathrm{AvailableRenewable}\)（六区加总），推荐方案新能源利用率约为 \(32.9\%\)；该比值受附件六区重复可用出力口径影响，不等于“可消纳上界已用尽”。联合基线下可消纳上界几乎被填满，系统峰值净购电之和约 \(2731\)\,MW。图~\ref{fig:q4-baseline}(c)(d) 进一步给出推荐方案的电力侧形态：高碳区更多依赖购电，低碳高新能源区（如 D/E/F）购售与储能调节更活跃，SOC 呈持续峰谷套利。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/fig_q4_baseline_panel.png}
+  \caption{基线策略比较与推荐方案。（a）四种策略的成本与碳排放；（b）四种策略的平均等待与网络时延；（c）推荐方案 \(\texttt{joint}\) 的六区净购电；（d）推荐方案的六区储能 SOC。}
+  \label{fig:q4-baseline}
+\end{figure}
+
+\begin{table}[htbp]
+  \centering
+  \caption{阶段一策略比较（阶段二均为成本最优储—电 LP）}
+  \label{tab:q4-baseline}
+  \small
+  \begin{tabular}{lcccccc}
+    \hline
+    策略 & 成本/$10^9$ & 碳/$10^6$ & 等待/h & 时延/ms & 峰值净购电/MW & 硬约束 \\
+    \hline
+    local\_first & 1.706 & 1.741 & 0.000 & 5.06 & 2670 & 通过 \\
+    lowest\_price & 1.607 & 1.684 & 77.167 & 28.09 & 2800 & 通过 \\
+    lowest\_carbon & 1.632 & 1.616 & 32.789 & 28.67 & 2732 & 通过 \\
+    joint（推荐） & 1.632 & 1.612 & 0.272 & 25.89 & 2731 & 通过 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\subsubsection{三类情景波动分析}
+
+在联合基线上设置碳、电价与新能源三类扰动。表~\ref{tab:q4-scenarios} 汇总关键指标，图~\ref{fig:q4-scenarios} 给出可视化。分述如下。
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{figures/fig_q4_scenarios_panel.png}
+  \caption{三类情景波动分析结果。（a）碳约束情景的成本—碳权衡（叉号表示 \(\varepsilon\) 不可行）；（b）电价机制、新能源波动及可行碳间隙情景的成本与排放对比。}
+  \label{fig:q4-scenarios}
+\end{figure}
+
+\begin{table}[htbp]
+  \centering
+  \caption{多情景关键指标（相对联合基线）}
+  \label{tab:q4-scenarios}
+  \small
+  \setlength{\tabcolsep}{3.5pt}
+  \begin{tabular}{llccccc}
+    \hline
+    类别 & 情景 & 成本/$10^9$ & 碳/$10^6$ & 预算/$10^6$ & 等待/h & 可行性 \\
+    \hline
+    基线 & joint & 1.632 & 1.612 & --- & 0.272 & 是 \\
+    \hline
+    \multirow{5}{*}{碳约束}
+      & 碳 \(100\%E_0\) & 1.632 & 1.612 & 1.612 & 0.272 & 是 \\
+      & 碳 \(90\%E_0\) & 1.719 & 1.519 & 1.451 & 5.402 & 否 \\
+      & 碳 \(80\%/70\%E_0\) & 1.719 & 1.519 & 1.289/1.128 & 6.289 & 否 \\
+      & 碳间隙 \(75\%\) & 1.649 & 1.571 & 1.571 & 0.272 & 是 \\
+      & 碳间隙 \(50\%\) & 1.693 & 1.530 & 1.530 & 0.272 & 是 \\
+    \hline
+    \multirow{3}{*}{电价}
+      & 峰谷拉大 & 1.508 & 1.731 & --- & 0.270 & 是 \\
+      & 平价 & 1.766 & 1.599 & --- & 0.269 & 是 \\
+      & 碳—电联动 & 1.760 & 1.598 & --- & 0.274 & 是 \\
+    \hline
+    \multirow{2}{*}{新能源}
+      & \(\gamma=0.8\) & 1.933 & 1.834 & --- & 0.272 & 是 \\
+      & \(\gamma=1.2\) & 1.347 & 1.440 & --- & 0.272 & 是 \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\begin{itemize}
+  \item \textbf{碳约束情景.}
+  以基线排放 \(E_0=1.612\times 10^6\)\,tCO\(_2\) 为参照，NonAI 碳下界约 \(E^{\mathrm{NonAI}}=1.449\times 10^6\)\,tCO\(_2\)。\(\varepsilon=E_0\)（碳 \(100\%\)）时约束不收紧，结果与联合基线一致；绝对比例 \(\varepsilon\in\{0.9,0.8,0.7\}E_0\) 低于或贴近物理/排程下界，硬约束判定为\textbf{不可行}，仅返回尽力降碳运行点（约 \(1.519\times 10^6\)\,tCO\(_2\)）而不宣称满足名义预算。可行间隙情景呈现标准 \(\varepsilon\)-约束形态：\(\alpha=0.75\) 时排放贴边 \(1.571\times 10^6\)、成本 \(1.649\times 10^9\)；\(\alpha=0.50\) 时排放 \(1.530\times 10^6\)、成本 \(1.693\times 10^9\)；\(\alpha=0.25\) 仍不可行。图~\ref{fig:q4-scenarios}(a) 中可行点随碳下降而成本上升，与 \(\min C\ \mathrm{s.t.}\ E\le\varepsilon\) 一致。
+
+  \item \textbf{电价机制情景.}
+  峰谷拉大后成本降至 \(1.508\times 10^9\)（约降 \(7.6\%\)），碳升至 \(1.731\times 10^6\)，表明更强分时价差在推动套利的同时可能增加高碳时段购电；平价使成本升至 \(1.766\times 10^9\)、碳约 \(1.599\times 10^6\)，峰值净购电之和降至约 \(2095\)\,MW，购电过程更平滑；碳—电联动下成本 \(1.760\times 10^9\)、碳约 \(1.598\times 10^6\)，高碳时段购电被价格信号抑制。三类机制下平均等待仍约 \(0.27\)\,h，服务质量保持稳定。见图~\ref{fig:q4-scenarios}(b)。
+
+  \item \textbf{新能源波动情景.}
+  偏紧（\(\gamma=0.8\)）时成本升至 \(1.933\times 10^9\)、碳升至 \(1.834\times 10^6\)，峰值净购电触及上限合计 \(2800\)\,MW，系统承压显著；偏松（\(\gamma=1.2\)）时成本降至 \(1.347\times 10^9\)、碳降至 \(1.440\times 10^6\)，为各情景中成本与碳较优的组合之一。偏松情景附加利用率下界后仍可行，说明额外可消纳出力可被负荷与储能吸收；在既定算力落点下，新能源丰度对成本与排放具有一阶影响。见图~\ref{fig:q4-scenarios}(b)。
+\end{itemize}
+
+综合来看：联合两阶段方案在成本、碳与等待之间取得可接受折中；碳硬约束在可行域内给出贴边且成本递增的权衡，对低于 NonAI 下界的名义比例则诚实报不可行；电价机制主要改形成本—碳与峰值形态；新能源丰度则同时主导成本与排放的大幅波动。

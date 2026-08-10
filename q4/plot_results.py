@@ -36,13 +36,36 @@ def plot_scenario_bars(summary: pd.DataFrame, path: Path) -> None:
 
 
 def plot_carbon_tradeoff(summary: pd.DataFrame, path: Path) -> None:
-    sub = summary[summary["scenario"].str.startswith("carbon_") | (summary["scenario"] == "baseline_joint")].copy()
+    sub = summary[
+        summary["scenario"].astype(str).str.startswith("carbon_")
+        | (summary["scenario"] == "baseline_joint")
+    ].copy()
     if sub.empty:
         return
-    fig, ax = plt.subplots(figsize=(7, 5))
-    ax.scatter(sub["carbon_tCO2"], sub["operating_cost_CNY"], s=70)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    if "carbon_feasible" in sub.columns:
+        ok = sub["carbon_feasible"].fillna(True).astype(bool)
+        ax.scatter(sub.loc[ok, "carbon_tCO2"], sub.loc[ok, "operating_cost_CNY"], s=70, label="feasible")
+        bad = ~ok
+        if bad.any():
+            ax.scatter(
+                sub.loc[bad, "carbon_tCO2"],
+                sub.loc[bad, "operating_cost_CNY"],
+                s=70,
+                marker="x",
+                label="infeasible ε",
+            )
+        ax.legend(fontsize=8)
+    else:
+        ax.scatter(sub["carbon_tCO2"], sub["operating_cost_CNY"], s=70)
     for r in sub.itertuples():
-        ax.annotate(r.scenario, (r.carbon_tCO2, r.operating_cost_CNY), fontsize=8, xytext=(4, 4), textcoords="offset points")
+        ax.annotate(
+            r.scenario,
+            (r.carbon_tCO2, r.operating_cost_CNY),
+            fontsize=7,
+            xytext=(4, 4),
+            textcoords="offset points",
+        )
     ax.set_xlabel("Carbon emission (tCO2)")
     ax.set_ylabel("Operating cost (CNY)")
     ax.set_title("Cost–carbon trade-off under carbon budgets")
