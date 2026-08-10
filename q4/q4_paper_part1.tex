@@ -1,0 +1,176 @@
+% 问题四论文草稿：问题分析 + 阶段一 + 阶段二
+% 结构说明：两阶段总框架并入“问题分析”；碳硬约束迭代并入“阶段二”；无小结节。
+
+\section{问题四：多区域算储电协同优化模型的构建与求解}
+
+\subsection{问题分析与建模边界}
+
+问题四要求在多区域智算中心网络上，对计算任务调度、储能运行与电网购售电进行协同优化，并同时关注运行成本、碳排放、服务质量、新能源消纳与购电峰值等目标。与前几问相比，本问的关键变化有三点：一是决策空间由“单阶段算力调度”扩展为“算力—储能—电力”耦合；二是评价由单一主指标扩展为多目标权衡；三是情景维度增加碳预算、电价机制与新能源出力扰动。
+
+结合题目说明，本文明确如下建模边界。第一，不构建区域间电力潮流与网络带宽模型，区域耦合仅通过任务可迁移机房集合与网络时延约束体现。第二，任务不可拆分、不可抢占；实时推理任务到达后立即执行；全部任务须在终端时刻前完成。第三，设施功率由 AI 与 NonAI 的 IT 负荷经 PUE 放大得到，并受 GPU、IT 与设施功率上限约束。第四，附件中各区域逐时 \(\mathrm{AvailableRenewable}\) 完全相同；若按六区独立写入能量平衡，将六倍重复计算系统新能源并导致近零购电的虚假解。因此，阶段二采用各区域基准可消纳上界
+\begin{equation}
+\overline{R}_{r,t}
+=
+\min\bigl\{
+U^{\mathrm{base}}_{r,t}+C^{\mathrm{RE,base}}_{r,t}+S^{\mathrm{base}}_{r,t},\;
+R^{\mathrm{raw}}_{r,t}
+\bigr\},
+\end{equation}
+其中 \(U^{\mathrm{base}},C^{\mathrm{RE,base}},S^{\mathrm{base}}\) 分别为附件基准方案中的新能源直供、新能源充电与售电分量，\(R^{\mathrm{raw}}\) 为附件原始可用出力。利用率指标仍以附件 \(\sum R^{\mathrm{raw}}\) 为分母报告，以免把“可消纳上界填充率”误当作系统新能源利用率。
+
+在上述边界下，若将全部任务起止、机房选择、储能充放电与购售电纳入单一大规模混合整数规划，变量与耦合约束规模过大，且碳、峰值等目标与成本目标量纲不一，直接加权难以解释。为此，本文采用\textbf{两阶段协同优化}：阶段一在硬资源与服务质量约束下，完成任务的时空落点，形成各区域 AI 负荷轨迹；阶段二在负荷固定后，对各区域独立求解储—电线性规划，主目标最小化运行成本
+\begin{equation}
+\min\;
+C
+=
+\sum_{r\in\mathcal{R}}
+\sum_{t\in\mathcal{T}}
+\bigl(
+p^{\mathrm{buy}}_{r,t}G_{r,t}
+-
+p^{\mathrm{sell}}_{r,t}S_{r,t}
+\bigr).
+\end{equation}
+碳排放、峰值净购电与新能源利用率不进入主目标的加权和，而通过 \(\varepsilon\)-约束或情景比较进入阶段二；当碳预算在当前排程下不可达时，再反馈调整阶段一的碳感知权重。该分解保留了题目要求的物理耦合，同时使 5 万任务规模下的求解可操作、可复核。
+
+\subsection{阶段一：碳电价感知的任务调度模型}
+
+记任务集合为 \(\mathcal{J}\)，区域集合为 \(\mathcal{R}=\{A,\ldots,F\}\)。对任务 \(j\in\mathcal{J}\)，决策为其执行区域 \(r_j\in\mathcal{R}_j\) 与整数开始时刻 \(s_j\)，其中 \(\mathcal{R}_j\) 为满足网络时延上限的可行机房集合。设任务 GPU 需求为 \(g_j\)、持续时间为 \(d_j\)（分钟）、单位 GPU 功率为 \(\pi_j\)，则在小时 \(t\) 的分钟重叠比例为 \(q_{j,t}(s_j)\in[0,1]\)，对应增量 GPU 占用与 AI 功率为
+\begin{equation}
+\Delta\mathrm{GPU}_{j,r,t}
+=
+g_j q_{j,t}(s_j),\qquad
+\Delta P^{\mathrm{AI}}_{j,r,t}
+=
+g_j\pi_j q_{j,t}(s_j).
+\end{equation}
+
+\textbf{硬约束}包括：（i）实时任务 \(s_j=a_j\)，非实时任务 \(a_j\le s_j\) 且完工时刻不超过截止时刻与终端时刻；（ii）\(r_j\in\mathcal{R}_j\)；（iii）各区各时 GPU 容量、AI+NonAI 的 IT 功率上限，以及经 PUE 后的设施功率上限。凡违反硬约束的候选一律剔除。
+
+由于精确联合整数规划在全量任务上难以在竞赛时限内稳定求解，阶段一采用动态贪心：先按“实时优先—可行区少—松弛紧—GPU·时长大”排序，再对每个任务在可行 \((r,s)\) 上最小化代理代价。主推联合策略的评分为
+\begin{equation}
+\begin{aligned}
+\Phi(j,r,s)
+&=
+\frac{1}{1000}E^{\mathrm{price}}_{j,r,s}
++
+\lambda E^{\mathrm{carbon}}_{j,r,s}
++
+0.05\,E^{\mathrm{CI}}_{j,r,s}
+\\
+&\quad
++
+w_w(s-a_j)
++
+0.05\,L_{o_j,r}
++
+w_m\mathbb{I}\{r\neq o_j\}
++
+20\,\rho^{\mathrm{peak}}_{j,r,s},
+\end{aligned}
+\end{equation}
+其中 \(o_j\) 为任务源区域，\(L_{o_j,r}\) 为网络时延，\(\rho^{\mathrm{peak}}\) 为放置后的 GPU 峰值占用率代理；\(E^{\mathrm{price}}\) 为设施电能量与分时电价的内积。碳相关项采用\textbf{计及剩余新能源}的代理：先计算该区该时段在已有 NonAI 与已放置 AI 之后的剩余可消纳新能源 \(\widetilde{R}_{r,t}\)，仅对超出部分计碳，
+\begin{equation}
+E^{\mathrm{carbon}}_{j,r,s}
+=
+\sum_{t}
+\max\bigl\{
+\Delta P^{\mathrm{AI}}_{j,r,t}\cdot\mathrm{PUE}_r-\widetilde{R}_{r,t},\,0
+\bigr\}
+\cdot
+\mathrm{CI}_{r,t},
+\end{equation}
+并以设施功率与碳强度的内积 \(E^{\mathrm{CI}}\) 作为弱偏好项。默认 \(\lambda=80\)；在碳 \(\varepsilon\)-约束收紧且需重调度时增大 \(\lambda\)，并相应降低等待与迁移权重，以使负荷更易迁向低购电碳区时。对比策略 \(\texttt{local\_first}\)、\(\texttt{lowest\_price}\)、\(\texttt{lowest\_carbon}\) 仅改变 \(\Phi\) 的主导项，硬约束集保持不变。
+
+阶段一输出各任务的 \((r_j,s_j)\) 及区域 AI 功率轨迹 \(P^{\mathrm{AI}}_{r,t}\)。区域总设施负荷
+\begin{equation}
+L_{r,t}
+=
+\bigl(P^{\mathrm{NonAI}}_{r,t}+P^{\mathrm{AI}}_{r,t}\bigr)\,\mathrm{PUE}_r
+\end{equation}
+作为阶段二的外生输入。
+
+\subsection{阶段二：区域储电联合优化与硬碳约束求解}
+
+固定 \(\{L_{r,t}\}\) 后，各区域 \(r\) 在时段 \(\mathcal{T}\) 上独立求解储—电线性规划。决策变量为购电 \(G_{r,t}\)、售电 \(S_{r,t}\)、充电 \(C_{r,t}\)、放电 \(D_{r,t}\)、弃光 \(U_{r,t}\) 与荷电状态 \(\mathrm{SOC}_{r,t}\)。主问题为
+\begin{equation}
+\min\;
+\sum_{t\in\mathcal{T}}
+\bigl(
+p^{\mathrm{buy}}_{r,t}G_{r,t}
+-
+p^{\mathrm{sell}}_{r,t}S_{r,t}
+\bigr).
+\end{equation}
+
+附件口径的能量平衡为
+\begin{equation}
+G_{r,t}+\overline{R}_{r,t}+D_{r,t}
+=
+L_{r,t}+C_{r,t}+S_{r,t}+U_{r,t},
+\qquad
+\forall t,
+\end{equation}
+并满足功率上下界
+\begin{equation}
+\begin{aligned}
+0&\le G_{r,t}\le G^{\max}_r,
+&
+0&\le S_{r,t}\le \min\{S^{\max}_r,S^{\mathrm{limit}}_r\},
+\\
+0&\le C_{r,t}\le C^{\max}_r,
+&
+0&\le D_{r,t}\le D^{\max}_r,
+&
+0&\le U_{r,t}\le \overline{R}_{r,t},
+\end{aligned}
+\end{equation}
+以及储能动态与终端约束
+\begin{equation}
+\begin{aligned}
+\mathrm{SOC}_{r,0}
+&=
+\mathrm{SOC}^{\mathrm{init}}_r+\eta^c_r C_{r,0}-D_{r,0}/\eta^d_r,
+\\
+\mathrm{SOC}_{r,t}
+&=
+\mathrm{SOC}_{r,t-1}+\eta^c_r C_{r,t}-D_{r,t}/\eta^d_r,
+\\
+\mathrm{SOC}^{\min}_r
+&\le
+\mathrm{SOC}_{r,t}
+\le
+\mathrm{SOC}^{\max}_r,
+\qquad
+\mathrm{SOC}_{r,|\mathcal{T}|-1}
+\ge
+\mathrm{SOC}^{\mathrm{init}}_r.
+\end{aligned}
+\end{equation}
+系统碳排放定义为购电碳强度加权：
+\begin{equation}
+E
+=
+\sum_{r}\sum_{t}
+\mathrm{CI}_{r,t}\,G_{r,t}.
+\end{equation}
+在需要时，阶段二可附加峰值约束 \(G_{r,t}-S_{r,t}\le \overline{N}_r\)、弃光上限（利用率下界）以及碳预算 \(E\le\varepsilon\)。上述 LP 由 HiGHS 求解。
+
+\textbf{硬碳 \(\varepsilon\)-约束的处理。}
+碳情景要求求解
+\begin{equation}
+\min\; C
+\quad
+\mathrm{s.t.}
+\quad
+E\le\varepsilon,
+\end{equation}
+且约束不可静默丢弃。具体步骤如下。
+
+（1）对当前负荷，先按区域求解以碳为目标的 LP，得到区域碳下界 \(E^{\min}_r\) 与系统下界 \(E^{\min}=\sum_r E^{\min}_r\)。若 \(E^{\min}>\varepsilon\)，则当前排程下预算不可达。
+
+（2）若 \(E^{\min}\le\varepsilon\)，将剩余松弛 \(\varepsilon-E^{\min}\) 按各区“成本最优碳—碳下界”的头寸比例分配，得到区域预算 \(\varepsilon_r\)，再求解 \(\min C_r\ \mathrm{s.t.}\ E_r\le\varepsilon_r\)。碳约束在求解梯子中优先保留；仅允许放松峰值或利用率等次级约束，不允许退回无碳约束解却仍宣称满足 \(\varepsilon\)。
+
+（3）若步骤（1）判定不可达，则提高阶段一联合评分中的碳权重 \(\lambda\) 并重调度，重复（1）—（2）。另计算仅含 NonAI 负荷时的系统碳下界 \(E^{\mathrm{NonAI}}\)：若 \(\varepsilon<E^{\mathrm{NonAI}}\)，则物理上不可能通过迁移 AI 任务满足预算，直接判定不可行并报告原因。
+
+由此，阶段二在基准情景下给出成本最优的储—电运行；在碳、峰值等情景下给出真正满足（或明确不可行）的 \(\varepsilon\)-约束解，为后续多情景比较提供口径一致的数值基础。
